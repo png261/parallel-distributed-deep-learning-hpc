@@ -1,0 +1,22 @@
+==========================================================
+Section 4 & 5: Distributed Deep Learning Benchmark Suite
+Execution Backend: 12-Core Intel Xeon + Native sm_61 CUDA C++ GPU Timing
+==========================================================
+
+[1] Generating 40-class 224x224 greyscale dataset (D=800 train, 200 val, sorted by label)...
+Model Parameters (p): 853,864 floats (3.26 MB)
+
+[2] Running ParallelSGD (No ShuffleSGD - Sorted Non-IID Shards, k=8)...
+  -> Final Val Acc: 2.50%, Loss: 3.6892
+
+[3] Running Algorithm 1 & 2: ParallelSGD + ShuffleSGD (k=8)...
+  -> Final Val Acc: 100.00%, Loss: 0.0047
+
+[4] Running Algorithm 3: ADMM.SGD (k=8)...
+  -> Final Val Acc: 55.50%, Loss: 1.2192
+
+[5] Running Algorithm 4: DownpourSGD (k=8)...
+  -> Final Val Acc: 52.50%, Loss: 1.3305
+
+[6] Running Worker Scaling & DownpourSGD Saturation Analysis (k in [1, 2, 4, 8, 16, 32])...
+Saved results to results/logs/distributed_algorithms_comparison.json and results/logs/scaling_analysis.csv
