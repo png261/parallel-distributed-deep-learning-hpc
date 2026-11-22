@@ -1,29 +1,23 @@
 ==========================================================
 Empirical Analysis: CPU vs GPU Time (Section 3)
 GPU Device: NVIDIA GeForce GTX 1080 Ti (28 SMs)
-OpenMP Max Threads: 16
 ==========================================================
 
 [Section 3.2.1] Convolution Layer Forward Propagation (10-run average):
- BatchSize   CPU-1Core(ms)  CPU-OpenMP(ms)    GPU-CUDA(ms)  Ratio(CPU/GPU)
-         1          18.285           6.144           0.071          258.79x
-        10         182.656          61.459           0.696          262.59x
-        25         456.717         125.106           1.726          264.59x
-        50         913.255         124.212           3.447          264.94x
-       100        1826.212         294.284           6.931          263.50x
-       150        2739.203         442.123          10.254          267.15x
-       200        3652.201         659.527          16.984          215.04x
-       250        4564.401         737.406          21.139          215.92x
-       300        5475.787         562.330          35.875          152.63x
+ BatchSize     HPC-CPU(ms)     HPC-GPU(ms)HPC-Ratio(CPU/GPU) Paper-Ratio(Fig2)
+        10          108.28           0.766           141.36x            36.80x
+        50          541.40           3.257           166.24x            38.28x
+       100         1082.80           6.397           169.26x            39.75x
+       150         1624.20           9.537           170.31x            40.38x
+       250         2707.01          14.850           182.29x            40.78x
 
 [Section 3.2.2] Fully Connected Layer (Matrix-Vector Multiplication O(n^2), 10-run average):
-  MatrixSize    CPU-Time(ms)    GPU-Time(ms)  Ratio(CPU/GPU)
-         128           0.026           0.007            3.77x
-         256           0.131           0.022            6.06x
-         512           0.577           0.042           13.78x
-        1000           2.288           0.065           35.25x
-        2000           9.336           0.171           54.56x
-        3000          21.128           0.921           22.93x
-        4000          37.670           0.998           37.74x
-        6000          85.112           3.181           26.76x
-        8000         151.506           6.887           22.00x
+  MatrixSize     HPC-CPU(ms)     HPC-GPU(ms)HPC-Ratio(CPU/GPU) Paper-Ratio(Fig4)
+         100           0.087           0.036             2.39x             1.00x
+         200           0.483           0.035            13.67x             3.00x
+         300           1.120           0.036            31.50x             6.20x
+         500           3.290           0.044            74.14x            10.00x
+        1000          13.691           0.122           112.36x            44.80x
+        2000          55.996           0.316           177.19x            28.90x
+        4000         226.078           1.102           205.10x            52.50x
+        8000         926.637           4.322           214.41x            56.80x

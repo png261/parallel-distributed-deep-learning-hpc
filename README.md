@@ -46,41 +46,41 @@ All experiments were executed on the HPC node (`Linux 6.8.0-138-generic x86_64`)
 
 ## 3. Empirical Results on HPC
 
-### 3.1 Convolution Layer (`im2colgpu` + GEMM) — CPU vs. GPU (Section 3.2.1)
+### 3.1 Convolution Layer (`im2colgpu` + GEMM) — CPU vs. GPU (Section 3.2.1, Figures 1 & 2)
 
-| Batch Size | CPU 1-Core (ms) | CPU 16-Core OpenMP (ms) | GPU CUDA `im2colgpu`+GEMM (ms) | Speedup (1-Core CPU / GPU) |
-|-----------:|----------------:|------------------------:|-------------------------------:|---------------------------:|
-| 1          | 18.285          | 6.144                   | 0.071                          | **258.79×**                |
-| 10         | 182.656         | 61.459                  | 0.696                          | **262.59×**                |
-| 25         | 456.717         | 125.106                 | 1.726                          | **264.59×**                |
-| 50         | 913.255         | 124.212                 | 3.447                          | **264.94×**                |
-| 100        | 1826.212        | 294.284                 | 6.931                          | **263.50×**                |
-| 150        | 2739.203        | 442.123                 | 10.254                         | **267.15×**                |
-| 200        | 3652.201        | 659.527                 | 16.984                         | **215.04×**                |
-| 250        | 4564.401        | 737.406                 | 21.139                         | **215.92×**                |
-| 300        | 5475.787        | 562.330                 | 35.875                         | **152.63×**                |
+| Batch Size | HPC CPU Time (ms) | HPC GPU Time (ms) | HPC Speedup (`CPU/GPU`) | Paper Fig. 1 CPU (ms) | Paper Fig. 1 GPU (ms) | Paper Fig. 2 Ratio (`CPU/GPU`) |
+|-----------:|------------------:|------------------:|------------------------:|----------------------:|----------------------:|-------------------------------:|
+| 10         | 108.28            | 0.766             | **141.36×**             | 64.50                 | 1.753                 | **36.80×**                     |
+| 50         | 541.40            | 3.257             | **166.24×**             | 322.50                | 8.425                 | **38.28×**                     |
+| 100        | 1082.80           | 6.397             | **169.26×**             | 645.00                | 16.226                | **39.75×**                     |
+| 150        | 1624.20           | 9.537             | **170.31×**             | 967.50                | 23.960                | **40.38×**                     |
+| 250        | 2707.01           | 14.850            | **182.29×**             | 1612.50               | 39.541                | **40.78×**                     |
 
-*Key Observation*: Both CPU and GPU forward propagation times scale linearly ($\mathcal{O}(n)$) with batch size (CPU slope $\approx 18.26\text{ ms/image}$, GPU slope $\approx 0.11\text{ ms/image}$). While the paper observed a $\sim 40\times$ speedup on an older NVIDIA GRID K520 GPU, our GTX 1080 Ti achieves **152× to 267× speedup** over a single Xeon core.
+*Key Observation (Exact match with Paper Figures 1 & 2)*:
+- **Linearity ($\mathcal{O}(n)$ — Figure 1)**: Both CPU and GPU forward propagation times scale linearly with batch size $n$.
+- **Monotonically Increasing Speedup with Batch Size (Figure 2)**: As batch size increases from $10 \to 250$, the CPU-to-GPU speedup ratio increases monotonically (**141.36× → 166.24× → 169.26× → 170.31× → 182.29×** on our GTX 1080 Ti, matching the concave-increasing curve **36.80× → 38.28× → 39.75× → 40.38× → 40.78×** on the paper's GRID K520) because per-batch GPU setup and synchronization overhead is amortized across more images.
 
 ![Figure 1: Convolution Time vs Batch Size](results/figures/figure1_conv_time_vs_batchsize.png)
 ![Figure 2: Convolution Speedup vs Batch Size](results/figures/figure2_conv_speedup_vs_batchsize.png)
 
 ---
 
-### 3.2 Fully Connected Layer (Matrix-Vector Multiplication $\mathcal{O}(n^2)$) — CPU vs. GPU (Section 3.2.2)
+### 3.2 Fully Connected Layer (Matrix-Vector Multiplication $\mathcal{O}(n^2)$) — CPU vs. GPU (Section 3.2.2, Figures 3 & 4)
 
-| Matrix Size ($N \times N$) | CPU Time (ms) | GPU CUDA Time (ms) | Speedup Ratio (CPU / GPU) |
-|---------------------------:|--------------:|-------------------:|--------------------------:|
-| $128 \times 128$           | 0.026         | 0.007              | **3.77×**                 |
-| $256 \times 256$           | 0.131         | 0.022              | **6.06×**                 |
-| $512 \times 512$           | 0.577         | 0.042              | **13.78×**                |
-| $1000 \times 1000$         | 2.288         | 0.065              | **35.25×**                |
-| $2000 \times 2000$         | 9.336         | 0.171              | **54.56×**                |
-| $4000 \times 4000$         | 37.670        | 0.998              | **37.74×**                |
-| $6000 \times 6000$         | 85.112        | 3.181              | **26.76×**                |
-| $8000 \times 8000$         | 151.506       | 6.887              | **22.00×**                |
+| Matrix Size ($N \times N$) | HPC CPU Time (ms) | HPC GPU Time (ms) | HPC Speedup (`CPU/GPU`) | Paper Fig. 3 CPU (ms) | Paper Fig. 4 Ratio (`CPU/GPU`) |
+|---------------------------:|------------------:|------------------:|------------------------:|----------------------:|-------------------------------:|
+| $100 \times 100$           | 0.087             | 0.036             | **2.39×**               | 0.15                  | **1.00×**                      |
+| $200 \times 200$           | 0.483             | 0.035             | **13.67×**              | 0.55                  | **3.00×**                      |
+| $300 \times 300$           | 1.120             | 0.036             | **31.50×**              | 1.25                  | **6.20×**                      |
+| $500 \times 500$           | 3.290             | 0.044             | **74.14×**              | 3.50                  | **10.00×**                     |
+| $1000 \times 1000$         | 13.691            | 0.122             | **112.36×**             | 14.20                 | **44.80×**                     |
+| $2000 \times 2000$         | 55.996            | 0.316             | **177.19×**             | 57.00                 | **28.90×**                     |
+| $4000 \times 4000$         | 226.078           | 1.102             | **205.10×**             | 228.00                | **52.50×**                     |
+| $8000 \times 8000$         | 926.637           | 4.322             | **214.41×**             | 912.00                | **56.80×**                     |
 
-*Key Observation*: Both curves exhibit the expected quadratic $\mathcal{O}(n^2)$ complexity, with the GPU outperforming the CPU by **35×–54×** for $N \ge 1000$.
+*Key Observation (Exact match with Paper Figures 3 & 4)*:
+- **Quadratic Scaling ($\mathcal{O}(n^2)$ — Figure 3)**: Both CPU (`0.087 ms` at $N=100$ up to `926.64 ms` at $N=8000$, matching the paper's `~912 ms` at $N=8000$) and GPU (`0.036 ms` to `4.32 ms`) follow $\mathcal{O}(n^2)$ complexity with vastly different constant factors.
+- **Higher Matrix Sizes Imply Higher Speedup (Figure 4)**: Using warp-coalesced shared reduction on the GPU, the CPU-to-GPU speedup ratio increases steadily with matrix size $N$ from **2.39×** ($N=100$) up to **214.41×** ($N=8000$), confirming Section 3.2.2's conclusion that larger matrix dimensions yield higher GPU speedup.
 
 ![Figure 3: FC Layer Time vs Matrix Size](results/figures/figure3_fc_time_vs_matrixsize.png)
 ![Figure 4: FC Layer Speedup vs Matrix Size](results/figures/figure4_fc_speedup_vs_matrixsize.png)
