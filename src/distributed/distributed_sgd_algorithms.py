@@ -187,6 +187,23 @@ class NetworkCostTracker:
         effective_step_time = max(grad_time_T / max(1, k_workers), server_tau)
         self.total_comm_time_s += effective_step_time
 
+    def record_ring_allreduce(self, k: int, payload_floats: int):
+        """
+        Modern Ring-AllReduce (PyTorch DDP / NCCL standard - post 2017):
+        - Overcomes the technology limitation of Parameter Server bottleneck and BitTorrent O(kp) cost:
+          1. Scatter-Reduce: (k-1) steps, sending (payload / k) floats per step.
+          2. AllGather: (k-1) steps, sending (payload / k) floats per step.
+          3. Total floats transferred per worker: 2 * (k-1)/k * payload_floats.
+             Notice: As k increases, communication volume per worker is strictly < 2 * payload (CONSTANT, independent of k!).
+          4. Total wall-clock communication time: 2*(k-1)*L + 2*((k-1)/k)*(payload_floats / B).
+        """
+        if k <= 1:
+            return
+        floats_per_worker = 2 * ((k - 1) / k) * payload_floats
+        self.total_floats_sent += int(floats_per_worker * k)
+        self.total_rounds += 2 * (k - 1)
+        self.total_comm_time_s += 2 * (k - 1) * self.L + 2 * ((k - 1) / k) * (payload_floats / self.B)
+
 
 def run_shuffle_sgd_algorithm2(worker_shards, d_sample: int, k: int, tracker: NetworkCostTracker, seed: int = 42):
     """
@@ -442,6 +459,100 @@ def run_parallel_sgd_alg1(
     return history
 
 
+def run_ring_allreduce_sgd(
+    init_state_dict,
+    x_train, y_train, x_val, y_val,
+    k: int,
+    epochs: int,
+    batch_size: int,
+    lr: float,
+    device: torch.device
+):
+    """
+    Modern Distributed Deep Learning (PyTorch DDP / Ring-AllReduce standard):
+    - Overcomes the technology limitations of the 2015 paper:
+      1. Replaces ShuffleSGD's heavy O(D) raw image network transfer with DistributedSampler
+         (0 MB transferred across network, compared to O(D) in ShuffleSGD!).
+      2. Replaces DownpourSGD's central Parameter Server bottleneck (P = T/tau) with Ring-AllReduce
+         where communication bandwidth cost per worker is 2*(k-1)/k * p (strictly < 2p, constant independent of k!).
+      3. Synchronous, exact gradient consensus per mini-batch step.
+    """
+    master_model = PaperCNN40(num_classes=40).to(device)
+    master_model.load_state_dict(init_state_dict)
+    num_params = sum(p.numel() for p in master_model.parameters())
+
+    tracker = NetworkCostTracker()
+    worker_models = [PaperCNN40(num_classes=40).to(device) for _ in range(k)]
+    for i in range(k):
+        set_flat_params(worker_models[i], get_flat_params(master_model))
+
+    optimizers = [torch.optim.SGD(worker_models[i].parameters(), lr=lr, momentum=0.9) for i in range(k)]
+
+    history = []
+    comp_time_total = 0.0
+    n_samples = len(y_train)
+    n_local = n_samples // k
+    steps_per_epoch = max(1, n_local // batch_size)
+
+    for ep in range(1, epochs + 1):
+        # Modern DistributedSampler with epoch-dependent pseudo-random seed (0 network bytes!)
+        g_rng = torch.Generator()
+        g_rng.manual_seed(ep * 1000 + 42)
+        global_perm = torch.randperm(n_samples, generator=g_rng)
+        worker_indices = [global_perm[i::k] for i in range(k)]
+
+        for step in range(steps_per_epoch):
+            step_worker_times = []
+            worker_grads = []
+
+            # 1. Forward + Backward on each worker in parallel
+            for i in range(k):
+                worker_models[i].train()
+                batch_idx = worker_indices[i][step * batch_size:(step + 1) * batch_size]
+                xb = x_train[batch_idx].to(device)
+                yb = y_train[batch_idx].to(device)
+
+                t0 = time.perf_counter()
+                optimizers[i].zero_grad()
+                scores = worker_models[i](xb)
+                loss = logistic_loss_eq2(scores, yb)
+                loss.backward()
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                t_w = time.perf_counter() - t0
+                step_worker_times.append(t_w)
+                worker_grads.append(get_flat_grads(worker_models[i]))
+
+            comp_time_total += max(step_worker_times)
+
+            # 2. Modern Ring-AllReduce gradient synchronization across the k workers
+            tracker.record_ring_allreduce(k, payload_floats=num_params)
+            avg_grad = torch.stack(worker_grads, dim=0).mean(dim=0)
+
+            # 3. Apply reduced gradients on every worker
+            for i in range(k):
+                offset = 0
+                for p in worker_models[i].parameters():
+                    numel = p.numel()
+                    p.grad.data.copy_(avg_grad[offset:offset + numel].view_as(p.data))
+                    offset += numel
+                optimizers[i].step()
+
+        set_flat_params(master_model, get_flat_params(worker_models[0]))
+        val_loss, val_acc = evaluate_model(master_model, x_val, y_val, device)
+        history.append({
+            "epoch": ep,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "comp_time_s": comp_time_total,
+            "comm_time_s": tracker.total_comm_time_s,
+            "total_time_s": comp_time_total + tracker.total_comm_time_s,
+            "comm_floats": tracker.total_floats_sent,
+        })
+
+    return history
+
+
 def run_admm_sgd_alg3(
     init_state_dict,
     x_train, y_train, x_val, y_val,
@@ -538,6 +649,100 @@ def run_admm_sgd_alg3(
             for i in range(k):
                 dual_u[i] = dual_u[i] + (updated_worker_params[i] - z_new)
 
+        val_loss, val_acc = evaluate_model(master_model, x_val, y_val, device)
+        history.append({
+            "epoch": ep,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "comp_time_s": comp_time_total,
+            "comm_time_s": tracker.total_comm_time_s,
+            "total_time_s": comp_time_total + tracker.total_comm_time_s,
+            "comm_floats": tracker.total_floats_sent,
+        })
+
+    return history
+
+
+def run_ring_allreduce_sgd(
+    init_state_dict,
+    x_train, y_train, x_val, y_val,
+    k: int,
+    epochs: int,
+    batch_size: int,
+    lr: float,
+    device: torch.device
+):
+    """
+    Modern Distributed Deep Learning (PyTorch DDP / Ring-AllReduce standard):
+    - Overcomes the technology limitations of the 2015 paper:
+      1. Replaces ShuffleSGD's heavy O(D) raw image network transfer with DistributedSampler
+         (0 MB transferred across network, compared to O(D) in ShuffleSGD!).
+      2. Replaces DownpourSGD's central Parameter Server bottleneck (P = T/tau) with Ring-AllReduce
+         where communication bandwidth cost per worker is 2*(k-1)/k * p (strictly < 2p, constant independent of k!).
+      3. Synchronous, exact gradient consensus per mini-batch step.
+    """
+    master_model = PaperCNN40(num_classes=40).to(device)
+    master_model.load_state_dict(init_state_dict)
+    num_params = sum(p.numel() for p in master_model.parameters())
+
+    tracker = NetworkCostTracker()
+    worker_models = [PaperCNN40(num_classes=40).to(device) for _ in range(k)]
+    for i in range(k):
+        set_flat_params(worker_models[i], get_flat_params(master_model))
+
+    optimizers = [torch.optim.SGD(worker_models[i].parameters(), lr=lr, momentum=0.9) for i in range(k)]
+
+    history = []
+    comp_time_total = 0.0
+    n_samples = len(y_train)
+    n_local = n_samples // k
+    steps_per_epoch = max(1, n_local // batch_size)
+
+    for ep in range(1, epochs + 1):
+        # Modern DistributedSampler with epoch-dependent pseudo-random seed (0 network bytes!)
+        g_rng = torch.Generator()
+        g_rng.manual_seed(ep * 1000 + 42)
+        global_perm = torch.randperm(n_samples, generator=g_rng)
+        worker_indices = [global_perm[i::k] for i in range(k)]
+
+        for step in range(steps_per_epoch):
+            step_worker_times = []
+            worker_grads = []
+
+            # 1. Forward + Backward on each worker in parallel
+            for i in range(k):
+                worker_models[i].train()
+                batch_idx = worker_indices[i][step * batch_size:(step + 1) * batch_size]
+                xb = x_train[batch_idx].to(device)
+                yb = y_train[batch_idx].to(device)
+
+                t0 = time.perf_counter()
+                optimizers[i].zero_grad()
+                scores = worker_models[i](xb)
+                loss = logistic_loss_eq2(scores, yb)
+                loss.backward()
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                t_w = time.perf_counter() - t0
+                step_worker_times.append(t_w)
+                worker_grads.append(get_flat_grads(worker_models[i]))
+
+            comp_time_total += max(step_worker_times)
+
+            # 2. Modern Ring-AllReduce gradient synchronization across the k workers
+            tracker.record_ring_allreduce(k, payload_floats=num_params)
+            avg_grad = torch.stack(worker_grads, dim=0).mean(dim=0)
+
+            # 3. Apply reduced gradients on every worker
+            for i in range(k):
+                offset = 0
+                for p in worker_models[i].parameters():
+                    numel = p.numel()
+                    p.grad.data.copy_(avg_grad[offset:offset + numel].view_as(p.data))
+                    offset += numel
+                optimizers[i].step()
+
+        set_flat_params(master_model, get_flat_params(worker_models[0]))
         val_loss, val_acc = evaluate_model(master_model, x_val, y_val, device)
         history.append({
             "epoch": ep,
@@ -656,6 +861,100 @@ def run_downpour_sgd_alg4(
     return history
 
 
+def run_ring_allreduce_sgd(
+    init_state_dict,
+    x_train, y_train, x_val, y_val,
+    k: int,
+    epochs: int,
+    batch_size: int,
+    lr: float,
+    device: torch.device
+):
+    """
+    Modern Distributed Deep Learning (PyTorch DDP / Ring-AllReduce standard):
+    - Overcomes the technology limitations of the 2015 paper:
+      1. Replaces ShuffleSGD's heavy O(D) raw image network transfer with DistributedSampler
+         (0 MB transferred across network, compared to O(D) in ShuffleSGD!).
+      2. Replaces DownpourSGD's central Parameter Server bottleneck (P = T/tau) with Ring-AllReduce
+         where communication bandwidth cost per worker is 2*(k-1)/k * p (strictly < 2p, constant independent of k!).
+      3. Synchronous, exact gradient consensus per mini-batch step.
+    """
+    master_model = PaperCNN40(num_classes=40).to(device)
+    master_model.load_state_dict(init_state_dict)
+    num_params = sum(p.numel() for p in master_model.parameters())
+
+    tracker = NetworkCostTracker()
+    worker_models = [PaperCNN40(num_classes=40).to(device) for _ in range(k)]
+    for i in range(k):
+        set_flat_params(worker_models[i], get_flat_params(master_model))
+
+    optimizers = [torch.optim.SGD(worker_models[i].parameters(), lr=lr, momentum=0.9) for i in range(k)]
+
+    history = []
+    comp_time_total = 0.0
+    n_samples = len(y_train)
+    n_local = n_samples // k
+    steps_per_epoch = max(1, n_local // batch_size)
+
+    for ep in range(1, epochs + 1):
+        # Modern DistributedSampler with epoch-dependent pseudo-random seed (0 network bytes!)
+        g_rng = torch.Generator()
+        g_rng.manual_seed(ep * 1000 + 42)
+        global_perm = torch.randperm(n_samples, generator=g_rng)
+        worker_indices = [global_perm[i::k] for i in range(k)]
+
+        for step in range(steps_per_epoch):
+            step_worker_times = []
+            worker_grads = []
+
+            # 1. Forward + Backward on each worker in parallel
+            for i in range(k):
+                worker_models[i].train()
+                batch_idx = worker_indices[i][step * batch_size:(step + 1) * batch_size]
+                xb = x_train[batch_idx].to(device)
+                yb = y_train[batch_idx].to(device)
+
+                t0 = time.perf_counter()
+                optimizers[i].zero_grad()
+                scores = worker_models[i](xb)
+                loss = logistic_loss_eq2(scores, yb)
+                loss.backward()
+                if device.type == "cuda":
+                    torch.cuda.synchronize(device)
+                t_w = time.perf_counter() - t0
+                step_worker_times.append(t_w)
+                worker_grads.append(get_flat_grads(worker_models[i]))
+
+            comp_time_total += max(step_worker_times)
+
+            # 2. Modern Ring-AllReduce gradient synchronization across the k workers
+            tracker.record_ring_allreduce(k, payload_floats=num_params)
+            avg_grad = torch.stack(worker_grads, dim=0).mean(dim=0)
+
+            # 3. Apply reduced gradients on every worker
+            for i in range(k):
+                offset = 0
+                for p in worker_models[i].parameters():
+                    numel = p.numel()
+                    p.grad.data.copy_(avg_grad[offset:offset + numel].view_as(p.data))
+                    offset += numel
+                optimizers[i].step()
+
+        set_flat_params(master_model, get_flat_params(worker_models[0]))
+        val_loss, val_acc = evaluate_model(master_model, x_val, y_val, device)
+        history.append({
+            "epoch": ep,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "comp_time_s": comp_time_total,
+            "comm_time_s": tracker.total_comm_time_s,
+            "total_time_s": comp_time_total + tracker.total_comm_time_s,
+            "comm_floats": tracker.total_floats_sent,
+        })
+
+    return history
+
+
 # ============================================================================
 # 5. Main Benchmark Suite Runner
 # ============================================================================
@@ -728,15 +1027,23 @@ def main():
     results["Downpour_SGD"] = hist_downpour
     print(f"  -> Final Val Acc: {hist_downpour[-1]['val_acc']:.2f}%, Loss: {hist_downpour[-1]['val_loss']:.4f}")
 
+    # 5. Modern Distributed Deep Learning: Ring-AllReduce + DistributedSampler (PyTorch DDP paradigm)
+    print(f"\n[6] Running Modern Distributed DL: Ring-AllReduce + DistributedSampler (k={k_workers})...")
+    hist_ring = run_ring_allreduce_sgd(
+        init_state, x_train, y_train, x_val, y_val,
+        k=k_workers, epochs=epochs, batch_size=batch_size, lr=lr, device=device
+    )
+    results["Ring_AllReduce_DDP"] = hist_ring
+    print(f"  -> Final Val Acc: {hist_ring[-1]['val_acc']:.2f}%, Loss: {hist_ring[-1]['val_loss']:.4f}")
+
     # Save training convergence & communication metrics
     with open("results/logs/distributed_algorithms_comparison.json", "w") as f:
         json.dump(results, f, indent=2)
 
-    # 5. Scaling experiment across number of machines/workers k in [1, 2, 4, 8, 16]
-    # Evaluates Computation Time, Communication Cost, and DownpourSGD saturation P = T / tau
-    print("\n[6] Running Worker Scaling & DownpourSGD Saturation Analysis (k in [1, 2, 4, 8, 16, 32])...")
+    # 6. Scaling experiment across number of machines/workers k in [1, 2, 4, 8, 16, 32]
+    # Evaluates Classical Paper (ParallelSGD, ADMM, Downpour) vs Modern Ring-AllReduce
+    print("\n[7] Running Worker Scaling Analysis (Classical Paper vs Modern Ring-AllReduce)...")
     scaling_rows = []
-    # Measure empirical single-batch gradient computation time T on GPU & CPU
     sample_x = x_train[:batch_size].to(device)
     sample_y = y_train[:batch_size].to(device)
     if device.type == "cuda":
@@ -753,23 +1060,21 @@ def main():
         torch.cuda.synchronize(device)
     T_grad_ms = ((time.perf_counter() - t0) / 20.0) * 1000.0
 
-    # Measure server parameter update + receive time tau (ms)
-    # In Section 5.2.1: once we have P = T / tau workers, adding more workers yields no speedup
     tau_server_ms = T_grad_ms / 8.0  # Threshold at P = 8 workers
-
     D_floats = int(np.prod(x_train.shape))
     p_floats = num_params
-    num_iters = epochs * (len(y_train) // (k_workers * batch_size))
+    bandwidth_B = 2.5e8  # floats per second
+    latency_L = 0.0005   # seconds
 
     for k_val in [1, 2, 4, 8, 12, 16, 24, 32]:
         log_k = max(1.0, math.log2(k_val))
-        # Theoretical & empirical metrics from Section 5:
+        iters_k = epochs * max(1, len(y_train) // (k_val * batch_size))
+
         # 1. ParallelSGD: Comm Cost = O(D) + O(k*p), Comm Time = O(D/k + p log k)
         psgd_comm_floats = D_floats + 2 * k_val * p_floats * epochs
         psgd_step_time_ms = (T_grad_ms * (len(y_train) / k_val) / batch_size) + log_k * tau_server_ms
 
         # 2. ADMM.SGD: Comm Cost = O(k * p * log(1/eps)), Comm Time = O(p * log(1/eps) * log k)
-        iters_k = epochs * max(1, len(y_train) // (k_val * batch_size))
         admm_comm_floats = 2 * k_val * p_floats * iters_k
         admm_step_time_ms = iters_k * (T_grad_ms + log_k * tau_server_ms)
 
@@ -780,6 +1085,14 @@ def main():
         downpour_total_time_ms = theta_iters * effective_update_interval_ms
         downpour_updates_per_sec = 1000.0 / effective_update_interval_ms
 
+        # 4. Modern Ring-AllReduce (PyTorch DDP): Comm Cost = 2 * (k-1)/k * p per worker per step
+        # Zero raw data movement (DistributedSampler moves 0 floats of D!)
+        # Total network volume sent across cluster: 2 * (k-1) * p * iters_k
+        ring_comm_floats = 2 * (k_val - 1) * p_floats * iters_k if k_val > 1 else 0
+        ring_comm_time_step_ms = (2 * (k_val - 1) * latency_L + 2 * ((k_val - 1) / k_val) * (p_floats / bandwidth_B)) * 1000.0 if k_val > 1 else 0.0
+        ring_step_time_ms = iters_k * (T_grad_ms + ring_comm_time_step_ms)
+        ring_updates_per_sec = (1000.0 / (T_grad_ms / k_val + ring_comm_time_step_ms / k_val)) if k_val > 1 else (1000.0 / T_grad_ms)
+
         scaling_rows.append({
             "k": k_val,
             "T_grad_ms": T_grad_ms,
@@ -788,10 +1101,13 @@ def main():
             "psgd_comm_mb": psgd_comm_floats * 4 / (1024**2),
             "admm_comm_mb": admm_comm_floats * 4 / (1024**2),
             "downpour_comm_mb": downpour_comm_floats * 4 / (1024**2),
+            "ring_allreduce_comm_mb": ring_comm_floats * 4 / (1024**2),
             "psgd_epoch_time_ms": psgd_step_time_ms,
             "admm_epoch_time_ms": admm_step_time_ms / epochs,
             "downpour_epoch_time_ms": downpour_total_time_ms / epochs,
+            "ring_allreduce_epoch_time_ms": ring_step_time_ms / epochs,
             "downpour_updates_per_sec": downpour_updates_per_sec,
+            "ring_updates_per_sec": ring_updates_per_sec,
         })
 
     with open("results/logs/scaling_analysis.csv", "w", newline="") as f:

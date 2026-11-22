@@ -164,15 +164,18 @@ def main():
     with open("results/logs/distributed_algorithms_comparison.json", "r") as f:
         dist_data = json.load(f)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
     styles = {
-        "ParallelSGD_NoShuffle": ("v--", "#7f7f7f", "ParallelSGD (No Shuffle - Sorted Non-IID)"),
+        "ParallelSGD_NoShuffle": ("v--", "#7f7f7f", "ParallelSGD (No Shuffle - Non-IID)"),
         "ParallelSGD_ShuffleSGD": ("o-", "#1f77b4", "Alg 1+2: ParallelSGD + ShuffleSGD"),
         "ADMM_SGD": ("s-", "#2ca02c", "Alg 3: ADMM.SGD (Sync Consensus)"),
         "Downpour_SGD": ("^-", "#d62728", "Alg 4: DownpourSGD (Async ParamServer)"),
+        "Ring_AllReduce_DDP": ("*-", "#9467bd", "Modern: Ring-AllReduce (PyTorch DDP)"),
     }
 
     for key, (marker, color, label) in styles.items():
+        if key not in dist_data:
+            continue
         hist = dist_data[key]
         epochs = [h["epoch"] for h in hist]
         losses = [h["val_loss"] for h in hist]
@@ -184,13 +187,13 @@ def main():
     ax1.set_xlabel("Epoch")
     ax1.set_ylabel("Logistic Loss")
     ax1.grid(True, linestyle="--", alpha=0.5)
-    ax1.legend(fontsize=9)
+    ax1.legend(fontsize=8.5)
 
     ax2.set_title("Validation Classification Accuracy (40 Classes) vs Epoch")
     ax2.set_xlabel("Epoch")
     ax2.set_ylabel("Accuracy (%)")
     ax2.grid(True, linestyle="--", alpha=0.5)
-    ax2.legend(fontsize=9)
+    ax2.legend(fontsize=8.5)
 
     fig.tight_layout()
     fig.savefig("results/figures/figure5_distributed_convergence.png")
@@ -198,6 +201,7 @@ def main():
 
     # ------------------------------------------------------------------------
     # 4. Figure 6: Communication Cost & DownpourSGD Worker Saturation (P = T / tau)
+    #    vs Modern Ring-AllReduce (PyTorch DDP)
     # ------------------------------------------------------------------------
     scale_rows = read_csv_rows("results/logs/scaling_analysis.csv")
     k_vals = [int(r["k"]) for r in scale_rows]
@@ -207,26 +211,34 @@ def main():
     down_ups = [float(r["downpour_updates_per_sec"]) for r in scale_rows]
     p_sat = float(scale_rows[0]["P_saturation_workers"])
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
     ax1.plot(k_vals, psgd_mb, "o-", color="#1f77b4", linewidth=2, label="ParallelSGD + ShuffleSGD: O(D + kp)")
     ax1.plot(k_vals, admm_mb, "s-", color="#2ca02c", linewidth=2, label="ADMM.SGD: O(kp log(1/ε))")
     ax1.plot(k_vals, down_mb, "^-", color="#d62728", linewidth=2, label="DownpourSGD: O(θp)")
+    if "ring_allreduce_comm_mb" in scale_rows[0]:
+        ring_mb = [float(r["ring_allreduce_comm_mb"]) for r in scale_rows]
+        ax1.plot(k_vals, ring_mb, "*-", color="#9467bd", linewidth=2.5, markersize=8,
+                 label="Modern: Ring-AllReduce DDP (0 Image Net Transfer)")
     ax1.set_title("Total Communication Volume vs Workers (k)")
     ax1.set_xlabel("Number of Machines / Workers (k)")
     ax1.set_ylabel("Communication Volume (MB)")
     ax1.set_yscale("log")
     ax1.grid(True, linestyle="--", alpha=0.5)
-    ax1.legend(fontsize=9)
+    ax1.legend(fontsize=8.5)
 
-    ax2.plot(k_vals, down_ups, "D-", color="#9467bd", linewidth=2, markersize=6,
-             label="DownpourSGD Effective Throughput")
+    ax2.plot(k_vals, down_ups, "D-", color="#d62728", linewidth=2, markersize=6,
+             label="DownpourSGD (Server Bottleneck)")
     ax2.axvline(x=p_sat, color="#d62728", linestyle="--", linewidth=1.8,
-                label=f"Saturation Threshold P = T/τ = {p_sat:.0f} workers")
-    ax2.set_title("DownpourSGD Parameter Server Bottleneck (Section 5.2.1)")
-    ax2.set_xlabel("Number of Asynchronous Workers (k)")
+                label=f"Downpour Saturation Threshold P = T/τ = {p_sat:.0f} workers")
+    if "ring_updates_per_sec" in scale_rows[0]:
+        ring_ups = [float(r["ring_updates_per_sec"]) for r in scale_rows]
+        ax2.plot(k_vals, ring_ups, "*-", color="#9467bd", linewidth=2.5, markersize=8,
+                 label="Modern: Ring-AllReduce DDP (Linear Scalability)")
+    ax2.set_title("Effective Parameter Updates / Second vs Workers")
+    ax2.set_xlabel("Number of Workers (k)")
     ax2.set_ylabel("Parameter Updates / Second")
     ax2.grid(True, linestyle="--", alpha=0.5)
-    ax2.legend(fontsize=9)
+    ax2.legend(fontsize=8.5)
 
     fig.tight_layout()
     fig.savefig("results/figures/figure6_communication_and_scaling.png")

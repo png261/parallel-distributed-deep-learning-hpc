@@ -1,11 +1,12 @@
 ==========================================================
 Section 2: Multi-Core CPU (1..16 cores) & Multi-GPU Scaling
 ==========================================================
-  CPU Threads:  1 | Minibatch (64) Fwd+Bwd Time:  2313.10 ms | Speedup:  1.00x
-  CPU Threads:  2 | Minibatch (64) Fwd+Bwd Time:  1204.15 ms | Speedup:  1.92x
-  CPU Threads:  4 | Minibatch (64) Fwd+Bwd Time:   620.01 ms | Speedup:  3.73x
-  CPU Threads:  8 | Minibatch (64) Fwd+Bwd Time:   356.10 ms | Speedup:  6.50x
-  CPU Threads: 12 | Minibatch (64) Fwd+Bwd Time:   272.70 ms | Speedup:  8.48x
-  CPU Threads: 16 | Minibatch (64) Fwd+Bwd Time:   412.61 ms | Speedup:  5.61x
-  GPU Count:    1 | Minibatch (64) Fwd+Bwd Time:    30.22 ms | Speedup vs 1-Core CPU:  76.54x
-  GPU Count:    2 | Minibatch (64) Fwd+Bwd Time:    16.18 ms | Speedup vs 1-Core CPU: 142.97x
+  CPU Threads:  1 | Minibatch (64) Fwd+Bwd Time:  2322.91 ms | Speedup:  1.00x
+  CPU Threads:  2 | Minibatch (64) Fwd+Bwd Time:  1187.52 ms | Speedup:  1.96x
+  CPU Threads:  4 | Minibatch (64) Fwd+Bwd Time:   647.30 ms | Speedup:  3.59x
+  CPU Threads:  8 | Minibatch (64) Fwd+Bwd Time:   362.51 ms | Speedup:  6.41x
+  CPU Threads: 12 | Minibatch (64) Fwd+Bwd Time:   262.83 ms | Speedup:  8.84x
+  CPU Threads: 16 | Minibatch (64) Fwd+Bwd Time:   233.15 ms | Speedup:  9.96x
+  GPU DataParallel (1x):   Minibatch (64) Time:    15.19 ms | Speedup vs 1-Core CPU: 152.95x
+  GPU DataParallel (2x):   Minibatch (64) Time:     8.85 ms | Speedup vs 1-Core CPU: 262.58x
+  GPU ModelParallel (2x):   Minibatch (64) Time:  4283.94 ms | Speedup vs 1-Core CPU:   0.54x

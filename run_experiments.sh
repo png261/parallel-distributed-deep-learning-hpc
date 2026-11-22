@@ -3,6 +3,7 @@ set -euo pipefail
 
 export PATH="/usr/local/cuda-12.1/bin:/opt/anaconda3/envs/pylab/bin:/opt/anaconda3/bin:$PATH"
 export LD_LIBRARY_PATH="/usr/local/cuda-12.1/lib64:${LD_LIBRARY_PATH:-}"
+export PYTHONUNBUFFERED=1
 
 mkdir -p build results/logs results/figures
 

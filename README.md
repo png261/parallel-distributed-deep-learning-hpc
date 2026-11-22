@@ -87,41 +87,39 @@ All experiments were executed on the HPC node (`Linux 6.8.0-138-generic x86_64`)
 
 ---
 
-### 3.3 Section 2: Multi-Core CPU (1–16 Xeon Cores) & Dual-GPU Scaling
+### 3.3 Section 2: Multi-Core CPU (1–16 Xeon Cores), Dual-GPU Data Parallelism, and Model Parallelism
 
-| Execution Device              | Cores / GPUs | Minibatch (64) Fwd+Bwd Time (ms) | Speedup vs 1-Core CPU |
-|:------------------------------|-------------:|---------------------------------:|----------------------:|
-| Intel Xeon CPU (1 Core)       | 1 Core       | 2313.10 ms                       | **1.00×**             |
-| Intel Xeon CPU (2 Cores)      | 2 Cores      | 1204.15 ms                       | **1.92×**             |
-| Intel Xeon CPU (4 Cores)      | 4 Cores      | 620.01 ms                        | **3.73×**             |
-| Intel Xeon CPU (8 Cores)      | 8 Cores      | 356.10 ms                        | **6.50×**             |
-| Intel Xeon CPU (12 Cores)     | 12 Cores     | 272.70 ms                        | **8.48×**             |
-| Intel Xeon CPU (16 Cores)     | 16 Cores     | 412.61 ms                        | **5.61×** (NUMA cross-socket overhead) |
-| **1× GPU (GTX 1080 Ti)**      | 1 GPU        | **30.22 ms**                     | **76.54×**            |
-| **2× GPUs (1080 Ti + 1080)**  | 2 GPUs       | **16.18 ms**                     | **142.97×**           |
+| Execution Device                          | Cores / GPUs | Minibatch (64) Fwd+Bwd Time (ms) | Speedup vs 1-Core CPU |
+|:------------------------------------------|-------------:|---------------------------------:|----------------------:|
+| Intel Xeon CPU (1 Core)                   | 1 Core       | 2367.87 ms                       | **1.00×**             |
+| Intel Xeon CPU (2 Cores)                  | 2 Cores      | 1220.72 ms                       | **1.94×**             |
+| Intel Xeon CPU (4 Cores)                  | 4 Cores      | 714.97 ms                        | **3.31×**             |
+| Intel Xeon CPU (8 Cores)                  | 8 Cores      | 894.40 ms                        | **2.65×**             |
+| Intel Xeon CPU (12 Cores)                 | 12 Cores     | 697.79 ms                        | **3.39×**             |
+| Intel Xeon CPU (16 Cores)                 | 16 Cores     | 621.80 ms                        | **3.81×**             |
+| **1× GPU (GTX 1080 Ti)**                  | 1 GPU        | **15.15 ms**                     | **156.33×**           |
+| **2× GPUs Data Parallel (1080 Ti + 1080)**| 2 GPUs       | **9.40 ms**                      | **251.91×**           |
+| **2× GPUs Model Parallel (Pipeline)**     | 2 GPUs       | **4430.67 ms**                   | **0.53×** (PCIe host-stage bottleneck) |
 
-![Figure 7: Multi-Core and Multi-GPU Speedup](results/figures/figure7_multicore_multigpu_speedup.png)
+*Key Takeaway on Model Parallelism*: Running Model Parallelism across 2 discrete GPUs over PCIe for a lightweight CNN model is constrained by intermediate activation transfer latency, perfectly confirming Section 2's note: *"We resort to model parallelism only if the model cannot be fit into a single machine and not so much to fasten the training process."*
 
 ---
 
-### 3.4 Section 5: Distributed Training Algorithms (`ParallelSGD`, `ShuffleSGD`, `ADMM.SGD`, `DownpourSGD`)
+### 3.4 Section 5: Classical Algorithms vs. Modern Ring-AllReduce (PyTorch DDP)
 
-We evaluate the 40-class $224 \times 224$ greyscale CNN (`p = 853,864` parameters, $3.26\text{ MB}$) distributed across $k = 8$ workers where the dataset is initially **sorted by label** (non-IID across machines, as assumed in Section 5.1.1):
+We benchmarked the 40-class $224 \times 224$ greyscale CNN (`p = 853,864` parameters, $3.26\text{ MB}$) across $k = 8$ workers, comparing classical 2015 methods from the paper against modern industry standards:
 
-| Algorithm | Data Shuffling | Parameter Sync Frequency | Final Val Loss | Final Val Accuracy (40 Classes) | Total Comm Volume |
-|:---|:---|:---|---:|---:|---:|
-| **ParallelSGD (No Shuffle)** | None (Sorted Non-IID shards) | Once per epoch (BitTorrent Tree) | 3.6892 | **2.50%** (Random chance) | 456.0 MB |
-| **Alg 1+2: ParallelSGD + ShuffleSGD** | `ShuffleSGD` ($k$-way merge) + Systematic Pairwise Shuffle | Once per epoch (BitTorrent Tree) | **0.0047** | **100.00%** | 1279.1 MB |
-| **Alg 3: ADMM.SGD** | None (Avoids data shuffle via per-step consensus) | Every mini-batch step (Sync BitTorrent Tree) | 1.2192 | **55.50%** | 1824.0 MB |
-| **Alg 4: DownpourSGD** | Local worker partitions | Every mini-batch step (Async Parameter Server) | 1.3305 | **52.50%** | 2084.6 MB |
-
-*Key Findings*:
-1. **Necessity of `ShuffleSGD` (Algorithm 2)**: When data is stored sorted by label across $k=8$ machines, naive one-shot/epoch `ParallelSGD` without shuffling fails to converge ($2.50\%$ accuracy on 40 classes) because each machine optimizes toward a disjoint subset of classes. Running `ShuffleSGD` ($k$-way merge of uniform samples + stratified bin assignment + systematic pairwise shuffling) restores full IID diversity on every worker and achieves **100.0% validation accuracy** with low communication overhead.
-2. **`ADMM.SGD` (Algorithm 3)**: By synchronizing parameters and updating dual consensus variables after every mini-batch, `ADMM.SGD` converges even without shuffling data across machines, at the cost of $\mathcal{O}(kp \log \frac{1}{\epsilon})$ parameter communication volume.
-3. **`DownpourSGD` (Algorithm 4)**: Eliminates synchronous straggler waiting via asynchronous push/pull to the parameter server, achieving rapid early loss reduction, while its total update throughput saturates once the number of workers reaches $P = T / \tau$ (Figure 6).
+| Algorithm / Paradigm | Data Shuffling | Communication Pattern | Final Val Loss | Final Val Accuracy | Comm Volume / Saturation Bottleneck |
+|:---|:---|:---|---:|---:|:---|
+| **ParallelSGD (No Shuffle)** | None (Non-IID shards) | BitTorrent Tree (Epoch) | 3.6892 | **2.50%** | Fails on sorted Non-IID data |
+| **Alg 1+2: ParallelSGD + ShuffleSGD** | `ShuffleSGD` ($k$-way merge) | BitTorrent Tree (Epoch) | **0.0047** | **100.00%** | High network volume ($O(D)$ raw image shuffle) |
+| **Alg 3: ADMM.SGD** | None | Sync BitTorrent (Step) | 1.2192 | **55.50%** | $O(kp \log \frac{1}{\epsilon})$ parameter traffic |
+| **Alg 4: DownpourSGD** | None | Async ParamServer | 1.3305 | **52.50%** | **Saturates at $P = 8$ workers ($116.35\text{ updates/s}$)** |
+| **Modern: Ring-AllReduce + DistributedSampler** | **DistributedSampler ($0\text{ MB}$ raw data moved)** | **Ring-AllReduce (NCCL)** | **1.3816** | **60.50%** | **No server bottleneck ($300.8\text{ updates/s}$ at $k=32$), constant $2p$ per worker!** |
 
 ![Figure 5: Distributed Convergence](results/figures/figure5_distributed_convergence.png)
-![Figure 6: Communication Volume & DownpourSGD Saturation](results/figures/figure6_communication_and_scaling.png)
+![Figure 6: Communication Volume & DownpourSGD Saturation vs Ring-AllReduce](results/figures/figure6_communication_and_scaling.png)
+![Figure 7: Multi-Core, Multi-GPU DataParallel and ModelParallel Speedup](results/figures/figure7_multicore_multigpu_speedup.png)
 
 ---
 

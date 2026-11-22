@@ -63,13 +63,27 @@ def benchmark_multicore_and_multigpu():
         for g in [1, 2]:
             elapsed_ms = float(lib.benchmark_cnn_step_multigpu(64, g, 20))
             speedup = rows[0]["time_ms"] / elapsed_ms
-            gpu_label = "GPU_1x_GTX1080Ti" if g == 1 else "GPU_2x_DualGPU"
-            print(f"  GPU Count:   {g:2d} | Minibatch (64) Fwd+Bwd Time: {elapsed_ms:8.2f} ms | Speedup vs 1-Core CPU: {speedup:6.2f}x")
+            gpu_label = "GPU_1x_GTX1080Ti" if g == 1 else "GPU_2x_DataParallel"
+            print(f"  GPU DataParallel ({g}x):   Minibatch (64) Time: {elapsed_ms:8.2f} ms | Speedup vs 1-Core CPU: {speedup:6.2f}x")
             rows.append({
                 "device": gpu_label,
                 "cores_or_gpus": g,
                 "time_ms": elapsed_ms,
                 "speedup_vs_1core": speedup,
+            })
+
+        # Benchmark Dual-GPU Model Parallelism (Pipeline Parallelism across GPU 0 & GPU 1)
+        if hasattr(lib, "benchmark_model_parallelism_multigpu"):
+            lib.benchmark_model_parallelism_multigpu.argtypes = [ctypes.c_int, ctypes.c_int]
+            lib.benchmark_model_parallelism_multigpu.restype = ctypes.c_double
+            mp_ms = float(lib.benchmark_model_parallelism_multigpu(64, 20))
+            mp_speedup = rows[0]["time_ms"] / mp_ms
+            print(f"  GPU ModelParallel (2x):   Minibatch (64) Time: {mp_ms:8.2f} ms | Speedup vs 1-Core CPU: {mp_speedup:6.2f}x")
+            rows.append({
+                "device": "GPU_2x_ModelParallel",
+                "cores_or_gpus": 2,
+                "time_ms": mp_ms,
+                "speedup_vs_1core": mp_speedup,
             })
 
     with open("results/logs/multicore_multigpu_benchmark.csv", "w", newline="") as f:
