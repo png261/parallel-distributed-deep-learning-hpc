@@ -266,6 +266,98 @@ def main():
         fig.savefig("results/figures/figure7_multicore_multigpu_speedup.png")
         plt.close(fig)
 
+    # ------------------------------------------------------------------------
+    # 6. Figure 8: Direction 1 - Gradient Compression (FP32 vs FP16 vs INT8 vs Top-k)
+    # ------------------------------------------------------------------------
+    if os.path.exists("results/logs/gradient_compression_results.json"):
+        with open("results/logs/gradient_compression_results.json", "r") as f:
+            comp_data = json.load(f)
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
+        comp_styles = {
+            "FP32_Baseline": ("o-", "#1f77b4", "FP32 Baseline (4 B/param)"),
+            "FP16_Half": ("s--", "#2ca02c", "FP16 Half (2 B/param - 2.0x)"),
+            "INT8_Quantized": ("^--", "#ff7f0e", "INT8 QSGD (1 B/param - 4.0x)"),
+            "TopK_Sparsified": ("*-", "#d62728", "Top-5% EF-SGD (10.0x Compression)"),
+        }
+
+        for m_key, (marker, color, label) in comp_styles.items():
+            if m_key not in comp_data:
+                continue
+            hist = comp_data[m_key]
+            epochs = [h["epoch"] for h in hist]
+            accs = [h["val_acc"] for h in hist]
+            ax1.plot(epochs, accs, marker, color=color, linewidth=2, markersize=6, label=label)
+
+        ax1.set_title("Direction 1: Validation Accuracy vs Epoch across Compression")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Validation Accuracy (%)")
+        ax1.grid(True, linestyle="--", alpha=0.5)
+        ax1.legend(fontsize=8.5)
+
+        # Bar chart of Total Communication Volume (MB)
+        if os.path.exists("results/logs/gradient_compression_summary.csv"):
+            sum_rows = read_csv_rows("results/logs/gradient_compression_summary.csv")
+            labels = [r["method"].replace("_", " ") for r in sum_rows]
+            mbs = [float(r["total_comm_mb"]) for r in sum_rows]
+            ratios = [float(r["compression_ratio"]) for r in sum_rows]
+            colors_bar = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"]
+
+            bars = ax2.bar(labels, mbs, color=colors_bar, edgecolor="black", alpha=0.85)
+            for bar, mb, cr in zip(bars, mbs, ratios):
+                ax2.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height() + 1.0,
+                         f"{mb:.1f} MB\n({cr:.1f}x)", ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+            ax2.set_title("Total Network Communication Volume (10 Epochs)")
+            ax2.set_ylabel("Volume Transmitted (MB)")
+            ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
+            plt.sca(ax2)
+            plt.xticks(rotation=15, ha="right")
+
+        fig.tight_layout()
+        fig.savefig("results/figures/figure8_gradient_compression.png")
+        plt.close(fig)
+
+    # ------------------------------------------------------------------------
+    # 7. Figure 9: Direction 2 - Heterogeneous Multi-GPU Load Balancing
+    # ------------------------------------------------------------------------
+    if os.path.exists("results/logs/heterogeneous_gpu_benchmark.csv"):
+        het_rows = read_csv_rows("results/logs/heterogeneous_gpu_benchmark.csv")
+        splits = [r["split_label"] for r in het_rows]
+        gpu0_times = [float(r["gpu0_time_ms"]) for r in het_rows]
+        gpu1_times = [float(r["gpu1_time_ms"]) for r in het_rows]
+        idle_times = [float(r["gpu0_idle_ms"]) for r in het_rows]
+        throughputs = [float(r["throughput_img_per_sec"]) for r in het_rows]
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
+        x_indices = np.arange(len(splits))
+        w = 0.35
+
+        ax1.bar(x_indices - w/2, gpu0_times, width=w, color="#1f77b4", edgecolor="black", label="GPU 0 (GTX 1080 Ti) Time")
+        ax1.bar(x_indices + w/2, gpu1_times, width=w, color="#ff7f0e", edgecolor="black", label="GPU 1 (GTX 1080) Time")
+        ax1.plot(x_indices, idle_times, "ro--", linewidth=2, markersize=6, label="GPU 0 Idle Waiting Time")
+        ax1.set_title("Per-GPU Compute Time & Idle Waiting Time vs Batch Split")
+        ax1.set_xlabel("Batch Split (B0 / B1) on 64 total images")
+        ax1.set_ylabel("Execution Time (ms)")
+        ax1.set_xticks(x_indices)
+        ax1.set_xticklabels(splits, rotation=20, ha="right", fontsize=9)
+        ax1.grid(True, linestyle="--", alpha=0.5)
+        ax1.legend(fontsize=8.5)
+
+        bars_thr = ax2.bar(splits, throughputs, color="#2ca02c", edgecolor="black", alpha=0.85)
+        for bar, thr in zip(bars_thr, throughputs):
+            ax2.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height() + 50.0,
+                     f"{thr:.0f} img/s", ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+        ax2.set_title("Training Throughput (images/sec) vs Heterogeneous Batch Split")
+        ax2.set_xlabel("Batch Split (B0 / B1)")
+        ax2.set_ylabel("Throughput (images/second)")
+        ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
+        plt.sca(ax2)
+        plt.xticks(rotation=20, ha="right", fontsize=9)
+
+        fig.tight_layout()
+        fig.savefig("results/figures/figure9_heterogeneous_gpu_balancing.png")
+        plt.close(fig)
+
     print("All figures generated successfully in results/figures/")
 
 

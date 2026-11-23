@@ -28,8 +28,23 @@ echo "=========================================================="
 /opt/anaconda3/envs/pylab/bin/python src/distributed/distributed_sgd_algorithms.py | tee results/logs/distributed_sgd.log
 
 echo ""
+echo ""
 echo "=========================================================="
-echo "[Step 4/4] Generating Publication Figures (Figures 1 to 7)"
+echo "[Step 4/6] Running Direction 1: Gradient Compression in Distributed DL"
+echo "           (FP32 vs FP16 vs INT8 vs Top-5% EF-SGD)"
+echo "=========================================================="
+/opt/anaconda3/envs/pylab/bin/python src/distributed/gradient_compression_benchmark.py | tee results/logs/gradient_compression.log
+
+echo ""
+echo "=========================================================="
+echo "[Step 5/6] Running Direction 2: Heterogeneous Multi-GPU Load Balancing"
+echo "           (GPU 0: GTX 1080 Ti vs GPU 1: GTX 1080)"
+echo "=========================================================="
+/opt/anaconda3/envs/pylab/bin/python src/distributed/heterogeneous_gpu_benchmark.py | tee results/logs/heterogeneous_gpu.log
+
+echo ""
+echo "=========================================================="
+echo "[Step 6/6] Generating Publication Figures (Figures 1 to 9)"
 echo "=========================================================="
 /opt/anaconda3/envs/pylab/bin/python src/plot_results.py
 

@@ -1,0 +1,5 @@
+method,final_acc,final_loss,total_comm_mb,compression_ratio
+FP32_Baseline,60.50,1.3816,1042.31,1.00
+FP16_Half,60.00,1.3251,521.16,2.00
+INT8_Quantized,55.00,1.7327,260.58,4.00
+TopK_Sparsified,41.00,2.2027,104.23,10.00

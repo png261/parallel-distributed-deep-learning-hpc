@@ -1,0 +1,18 @@
+==========================================================
+Direction 1: Gradient Compression in Distributed Deep Learning
+Methods: FP32 Baseline, FP16 Half, INT8 QSGD, Top-5% EF-SGD
+==========================================================
+
+Running Distributed SGD with: FP32_Baseline...
+  -> Final Val Acc: 60.50%, Loss: 1.3816, Comm Volume: 1042.31 MB (Compression: 1.00x)
+
+Running Distributed SGD with: FP16_Half...
+  -> Final Val Acc: 60.00%, Loss: 1.3251, Comm Volume: 521.16 MB (Compression: 2.00x)
+
+Running Distributed SGD with: INT8_Quantized...
+  -> Final Val Acc: 55.00%, Loss: 1.7327, Comm Volume: 260.58 MB (Compression: 4.00x)
+
+Running Distributed SGD with: TopK_Sparsified...
+  -> Final Val Acc: 41.00%, Loss: 2.2027, Comm Volume: 104.23 MB (Compression: 10.00x)
+
+Saved Direction 1 results to results/logs/gradient_compression_results.json and summary CSV!

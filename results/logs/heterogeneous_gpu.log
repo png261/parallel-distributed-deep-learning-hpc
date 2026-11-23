@@ -1,0 +1,21 @@
+==========================================================
+Direction 2: Heterogeneous Multi-GPU Load Balancing
+Hardware: GPU 0 (GTX 1080 Ti, 3584 cores) vs GPU 1 (GTX 1080, 2560 cores)
+==========================================================
+
+Benchmarking Total Batch Size = 64 (Average over 25 runs):
+Split (B0/B1)  GPU 0 (1080Ti)    GPU 1 (1080)      Total Step (ms)   GPU 0 Idle (ms)   Throughput (img/s)
+---------------------------------------------------------------------------------------------------------
+16/48 (25%)    3.97              13.35             13.35             9.38              4794.0            
+24/40 (38%)    5.85              10.37             10.37             4.52              6170.2            
+32/32 (50%)    7.04              8.21              8.22              1.17              7788.8            
+36/28 (56%)    7.45              7.22              7.45              0.00              8586.9            
+40/24 (62%)    8.20              6.17              8.20              0.00              7800.7            
+44/20 (69%)    8.99              5.12              9.00              0.00              7111.0            
+48/16 (75%)    9.80              4.10              9.81              0.00              6525.7            
+---------------------------------------------------------------------------------------------------------
+Optimal Split: 36/28 (56%) -> Throughput: 8586.9 img/s
+Uniform 50-50 Split: Throughput: 7788.8 img/s (GPU 0 Idle Time: 1.17 ms)
+Heterogeneous Load Balancing Throughput Gain: +10.2%
+
+Saved Direction 2 results to results/logs/heterogeneous_gpu_benchmark.csv!

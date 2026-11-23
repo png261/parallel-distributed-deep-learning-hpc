@@ -1,0 +1,290 @@
+{
+  "FP32_Baseline": [
+    {
+      "epoch": 1,
+      "val_loss": 3.6799425983428957,
+      "val_acc": 2.5,
+      "comp_time_s": 0.42450934764929116,
+      "total_mb_transmitted": 104.2314453125
+    },
+    {
+      "epoch": 2,
+      "val_loss": 3.664116630554199,
+      "val_acc": 3.5000000000000004,
+      "comp_time_s": 0.7783248240593821,
+      "total_mb_transmitted": 208.462890625
+    },
+    {
+      "epoch": 3,
+      "val_loss": 3.636933135986328,
+      "val_acc": 7.5,
+      "comp_time_s": 1.1393863230478019,
+      "total_mb_transmitted": 312.6943359375
+    },
+    {
+      "epoch": 4,
+      "val_loss": 3.5780938625335694,
+      "val_acc": 20.0,
+      "comp_time_s": 1.5326988503802568,
+      "total_mb_transmitted": 416.92578125
+    },
+    {
+      "epoch": 5,
+      "val_loss": 3.4259815979003907,
+      "val_acc": 40.5,
+      "comp_time_s": 1.8644130104221404,
+      "total_mb_transmitted": 521.1572265625
+    },
+    {
+      "epoch": 6,
+      "val_loss": 2.947318124771118,
+      "val_acc": 45.0,
+      "comp_time_s": 2.2449105423875153,
+      "total_mb_transmitted": 625.388671875
+    },
+    {
+      "epoch": 7,
+      "val_loss": 1.5856555128097534,
+      "val_acc": 52.5,
+      "comp_time_s": 2.627189570106566,
+      "total_mb_transmitted": 729.6201171875
+    },
+    {
+      "epoch": 8,
+      "val_loss": 1.258234477043152,
+      "val_acc": 52.5,
+      "comp_time_s": 3.0080240149982274,
+      "total_mb_transmitted": 833.8515625
+    },
+    {
+      "epoch": 9,
+      "val_loss": 3.7896316146850584,
+      "val_acc": 40.0,
+      "comp_time_s": 3.3876619590446353,
+      "total_mb_transmitted": 938.0830078125
+    },
+    {
+      "epoch": 10,
+      "val_loss": 1.3815847492218019,
+      "val_acc": 60.5,
+      "comp_time_s": 3.734699700959027,
+      "total_mb_transmitted": 1042.314453125
+    }
+  ],
+  "FP16_Half": [
+    {
+      "epoch": 1,
+      "val_loss": 3.6799425983428957,
+      "val_acc": 2.5,
+      "comp_time_s": 0.3963397650513798,
+      "total_mb_transmitted": 52.11572265625
+    },
+    {
+      "epoch": 2,
+      "val_loss": 3.664116630554199,
+      "val_acc": 3.5000000000000004,
+      "comp_time_s": 0.7695447942242026,
+      "total_mb_transmitted": 104.2314453125
+    },
+    {
+      "epoch": 3,
+      "val_loss": 3.636926612854004,
+      "val_acc": 7.5,
+      "comp_time_s": 1.152315160492435,
+      "total_mb_transmitted": 156.34716796875
+    },
+    {
+      "epoch": 4,
+      "val_loss": 3.5780209159851073,
+      "val_acc": 20.0,
+      "comp_time_s": 1.5483529197517782,
+      "total_mb_transmitted": 208.462890625
+    },
+    {
+      "epoch": 5,
+      "val_loss": 3.425851936340332,
+      "val_acc": 40.5,
+      "comp_time_s": 1.934463161509484,
+      "total_mb_transmitted": 260.57861328125
+    },
+    {
+      "epoch": 6,
+      "val_loss": 2.9476678562164307,
+      "val_acc": 45.0,
+      "comp_time_s": 2.3199253499042243,
+      "total_mb_transmitted": 312.6943359375
+    },
+    {
+      "epoch": 7,
+      "val_loss": 1.588954005241394,
+      "val_acc": 52.5,
+      "comp_time_s": 2.7122792387381196,
+      "total_mb_transmitted": 364.81005859375
+    },
+    {
+      "epoch": 8,
+      "val_loss": 1.2554254293441773,
+      "val_acc": 47.5,
+      "comp_time_s": 3.1031592627987266,
+      "total_mb_transmitted": 416.92578125
+    },
+    {
+      "epoch": 9,
+      "val_loss": 3.261483383178711,
+      "val_acc": 47.5,
+      "comp_time_s": 3.459381313761696,
+      "total_mb_transmitted": 469.04150390625
+    },
+    {
+      "epoch": 10,
+      "val_loss": 1.3250524091720581,
+      "val_acc": 60.0,
+      "comp_time_s": 3.804330409737304,
+      "total_mb_transmitted": 521.1572265625
+    }
+  ],
+  "INT8_Quantized": [
+    {
+      "epoch": 1,
+      "val_loss": 3.6799838161468506,
+      "val_acc": 2.5,
+      "comp_time_s": 0.35280198068358004,
+      "total_mb_transmitted": 26.0579833984375
+    },
+    {
+      "epoch": 2,
+      "val_loss": 3.664229574203491,
+      "val_acc": 3.5000000000000004,
+      "comp_time_s": 0.7234523284714669,
+      "total_mb_transmitted": 52.115966796875
+    },
+    {
+      "epoch": 3,
+      "val_loss": 3.637364025115967,
+      "val_acc": 7.5,
+      "comp_time_s": 1.0932757167611271,
+      "total_mb_transmitted": 78.1739501953125
+    },
+    {
+      "epoch": 4,
+      "val_loss": 3.5797713947296144,
+      "val_acc": 15.0,
+      "comp_time_s": 1.4661172640044242,
+      "total_mb_transmitted": 104.23193359375
+    },
+    {
+      "epoch": 5,
+      "val_loss": 3.430402240753174,
+      "val_acc": 37.5,
+      "comp_time_s": 1.848257815465331,
+      "total_mb_transmitted": 130.2899169921875
+    },
+    {
+      "epoch": 6,
+      "val_loss": 2.962139158248901,
+      "val_acc": 45.0,
+      "comp_time_s": 2.206893381429836,
+      "total_mb_transmitted": 156.347900390625
+    },
+    {
+      "epoch": 7,
+      "val_loss": 1.6141727256774903,
+      "val_acc": 52.5,
+      "comp_time_s": 2.566090201260522,
+      "total_mb_transmitted": 182.4058837890625
+    },
+    {
+      "epoch": 8,
+      "val_loss": 1.3271023511886597,
+      "val_acc": 47.5,
+      "comp_time_s": 2.9610312120057642,
+      "total_mb_transmitted": 208.4638671875
+    },
+    {
+      "epoch": 9,
+      "val_loss": 3.531046485900879,
+      "val_acc": 39.5,
+      "comp_time_s": 3.3451914738398045,
+      "total_mb_transmitted": 234.5218505859375
+    },
+    {
+      "epoch": 10,
+      "val_loss": 1.7326508140563965,
+      "val_acc": 55.00000000000001,
+      "comp_time_s": 3.72126259887591,
+      "total_mb_transmitted": 260.579833984375
+    }
+  ],
+  "TopK_Sparsified": [
+    {
+      "epoch": 1,
+      "val_loss": 3.682648916244507,
+      "val_acc": 2.5,
+      "comp_time_s": 0.4682545738760382,
+      "total_mb_transmitted": 10.423095703125
+    },
+    {
+      "epoch": 2,
+      "val_loss": 3.66996018409729,
+      "val_acc": 6.0,
+      "comp_time_s": 0.942712006624788,
+      "total_mb_transmitted": 20.84619140625
+    },
+    {
+      "epoch": 3,
+      "val_loss": 3.650628213882446,
+      "val_acc": 5.0,
+      "comp_time_s": 1.4239243576303124,
+      "total_mb_transmitted": 31.269287109375
+    },
+    {
+      "epoch": 4,
+      "val_loss": 3.610839853286743,
+      "val_acc": 13.0,
+      "comp_time_s": 1.9362162717152387,
+      "total_mb_transmitted": 41.6923828125
+    },
+    {
+      "epoch": 5,
+      "val_loss": 3.5184810161590576,
+      "val_acc": 23.5,
+      "comp_time_s": 2.406073576072231,
+      "total_mb_transmitted": 52.115478515625
+    },
+    {
+      "epoch": 6,
+      "val_loss": 3.263006467819214,
+      "val_acc": 40.0,
+      "comp_time_s": 2.8587582202162594,
+      "total_mb_transmitted": 62.53857421875
+    },
+    {
+      "epoch": 7,
+      "val_loss": 2.435862455368042,
+      "val_acc": 47.5,
+      "comp_time_s": 3.394787854049355,
+      "total_mb_transmitted": 72.961669921875
+    },
+    {
+      "epoch": 8,
+      "val_loss": 1.0697704982757568,
+      "val_acc": 54.50000000000001,
+      "comp_time_s": 3.8937489548698068,
+      "total_mb_transmitted": 83.384765625
+    },
+    {
+      "epoch": 9,
+      "val_loss": 3.1231558609008787,
+      "val_acc": 42.5,
+      "comp_time_s": 4.364997707074508,
+      "total_mb_transmitted": 93.807861328125
+    },
+    {
+      "epoch": 10,
+      "val_loss": 2.202665433883667,
+      "val_acc": 41.0,
+      "comp_time_s": 4.864041392691433,
+      "total_mb_transmitted": 104.23095703125
+    }
+  ]
+}

@@ -149,6 +149,99 @@ double benchmark_cnn_step_multigpu(int batch_size, int num_gpus, int num_runs) {
     return avg_ms;
 }
 
+// Heterogeneous Multi-GPU Benchmark across GPU 0 (GTX 1080 Ti) and GPU 1 (GTX 1080)
+// Takes batch_0 (for GPU 0) and batch_1 (for GPU 1), runs concurrent Fwd+Bwd passes,
+// and measures individual GPU execution times, total step time, and GPU 0 idle time.
+void benchmark_heterogeneous_multigpu(int batch_0, int batch_1, int num_runs,
+                                      double* out_gpu0_ms, double* out_gpu1_ms,
+                                      double* out_total_ms, double* out_gpu0_idle_ms) {
+    int img_h = 224, img_w = 224, ksize = 11, stride = 4, num_filters = 96;
+    int h_col = (img_h - ksize) / stride + 1;
+    int w_col = (img_w - ksize) / stride + 1;
+    int K = ksize * ksize;
+    int N = num_filters;
+
+    int batches[2] = {batch_0, batch_1};
+    int Ms[2] = {batch_0 * h_col * w_col, batch_1 * h_col * w_col};
+
+    float *d_im[2], *d_col[2], *d_w[2], *d_out[2], *d_grad_w[2];
+
+    for (int g = 0; g < 2; ++g) {
+        cudaSetDevice(g);
+        cudaMalloc(&d_im[g], batches[g] * img_h * img_w * sizeof(float));
+        cudaMalloc(&d_col[g], Ms[g] * K * sizeof(float));
+        cudaMalloc(&d_w[g], K * N * sizeof(float));
+        cudaMalloc(&d_out[g], Ms[g] * N * sizeof(float));
+        cudaMalloc(&d_grad_w[g], K * N * sizeof(float));
+    }
+
+    int threads = 256;
+    dim3 block_gemm(TILE_SIZE, TILE_SIZE);
+
+    // Warmup
+    #pragma omp parallel for num_threads(2)
+    for (int g = 0; g < 2; ++g) {
+        cudaSetDevice(g);
+        int blocks_im2col = (Ms[g] * K + threads - 1) / threads;
+        dim3 grid_fwd((N + TILE_SIZE - 1) / TILE_SIZE, (Ms[g] + TILE_SIZE - 1) / TILE_SIZE);
+        dim3 grid_bwd_w((N + TILE_SIZE - 1) / TILE_SIZE, (K + TILE_SIZE - 1) / TILE_SIZE);
+        dim3 grid_bwd_x((K + TILE_SIZE - 1) / TILE_SIZE, (Ms[g] + TILE_SIZE - 1) / TILE_SIZE);
+
+        im2col_batched_kernel<<<blocks_im2col, threads>>>(d_im[g], batches[g], 1, img_h, img_w, ksize, stride, h_col, w_col, d_col[g]);
+        gemm_tiled_kernel<<<grid_fwd, block_gemm>>>(d_col[g], d_w[g], d_out[g], Ms[g], K, N);
+        gemm_tiled_kernel<<<grid_bwd_w, block_gemm>>>(d_col[g], d_out[g], d_grad_w[g], K, Ms[g], N);
+        gemm_tiled_kernel<<<grid_bwd_x, block_gemm>>>(d_out[g], d_w[g], d_col[g], Ms[g], N, K);
+        cudaDeviceSynchronize();
+    }
+
+    double acc_gpu0_ms = 0.0;
+    double acc_gpu1_ms = 0.0;
+    double acc_total_ms = 0.0;
+
+    for (int r = 0; r < num_runs; ++r) {
+        double g_ms[2] = {0.0, 0.0};
+        auto step_start = std::chrono::high_resolution_clock::now();
+
+        #pragma omp parallel for num_threads(2)
+        for (int g = 0; g < 2; ++g) {
+            cudaSetDevice(g);
+            int blocks_im2col = (Ms[g] * K + threads - 1) / threads;
+            dim3 grid_fwd((N + TILE_SIZE - 1) / TILE_SIZE, (Ms[g] + TILE_SIZE - 1) / TILE_SIZE);
+            dim3 grid_bwd_w((N + TILE_SIZE - 1) / TILE_SIZE, (K + TILE_SIZE - 1) / TILE_SIZE);
+            dim3 grid_bwd_x((K + TILE_SIZE - 1) / TILE_SIZE, (Ms[g] + TILE_SIZE - 1) / TILE_SIZE);
+
+            auto t_g0 = std::chrono::high_resolution_clock::now();
+            im2col_batched_kernel<<<blocks_im2col, threads>>>(d_im[g], batches[g], 1, img_h, img_w, ksize, stride, h_col, w_col, d_col[g]);
+            gemm_tiled_kernel<<<grid_fwd, block_gemm>>>(d_col[g], d_w[g], d_out[g], Ms[g], K, N);
+            gemm_tiled_kernel<<<grid_bwd_w, block_gemm>>>(d_col[g], d_out[g], d_grad_w[g], K, Ms[g], N);
+            gemm_tiled_kernel<<<grid_bwd_x, block_gemm>>>(d_out[g], d_w[g], d_col[g], Ms[g], N, K);
+            cudaDeviceSynchronize();
+            auto t_g1 = std::chrono::high_resolution_clock::now();
+            g_ms[g] = std::chrono::duration<double, std::milli>(t_g1 - t_g0).count();
+        }
+        auto step_end = std::chrono::high_resolution_clock::now();
+        double tot_ms = std::chrono::duration<double, std::milli>(step_end - step_start).count();
+
+        acc_gpu0_ms += g_ms[0];
+        acc_gpu1_ms += g_ms[1];
+        acc_total_ms += tot_ms;
+    }
+
+    *out_gpu0_ms = acc_gpu0_ms / num_runs;
+    *out_gpu1_ms = acc_gpu1_ms / num_runs;
+    *out_total_ms = acc_total_ms / num_runs;
+    *out_gpu0_idle_ms = std::max(0.0, *out_gpu1_ms - *out_gpu0_ms);
+
+    for (int g = 0; g < 2; ++g) {
+        cudaSetDevice(g);
+        cudaFree(d_im[g]);
+        cudaFree(d_col[g]);
+        cudaFree(d_w[g]);
+        cudaFree(d_out[g]);
+        cudaFree(d_grad_w[g]);
+    }
+}
+
 // Model Parallelism / Pipeline Parallelism across Dual GPUs (GPU 0: Conv1, GPU 1: Stage 2 + FC)
 // Uses pinned host staging memory for PCIe transfers (robust across all consumer/datacenter GPUs)
 double benchmark_model_parallelism_multigpu(int batch_size, int num_runs) {
