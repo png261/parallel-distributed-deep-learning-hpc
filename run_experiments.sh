@@ -37,14 +37,21 @@ echo "=========================================================="
 
 echo ""
 echo "=========================================================="
-echo "[Step 5/6] Running Direction 2: Heterogeneous Multi-GPU Load Balancing"
+echo "[Step 5/7] Running Direction 2: Heterogeneous Multi-GPU Load Balancing"
 echo "           (GPU 0: GTX 1080 Ti vs GPU 1: GTX 1080)"
 echo "=========================================================="
 /opt/anaconda3/envs/pylab/bin/python src/distributed/heterogeneous_gpu_benchmark.py | tee results/logs/heterogeneous_gpu.log
 
 echo ""
 echo "=========================================================="
-echo "[Step 6/6] Generating Publication Figures (Figures 1 to 9)"
+echo "[Step 6/7] Running Advanced Distributed Algorithms (Directions 3 & 4)"
+echo "           (Local-SGD H-step sync & Delay-Compensated Asynchronous SGD)"
+echo "=========================================================="
+/opt/anaconda3/envs/pylab/bin/python src/distributed/advanced_distributed_benchmarks.py | tee results/logs/advanced_distributed.log
+
+echo ""
+echo "=========================================================="
+echo "[Step 7/7] Generating Publication Figures (Figures 1 to 11)"
 echo "=========================================================="
 /opt/anaconda3/envs/pylab/bin/python src/plot_results.py
 

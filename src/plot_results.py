@@ -358,6 +358,116 @@ def main():
         fig.savefig("results/figures/figure9_heterogeneous_gpu_balancing.png")
         plt.close(fig)
 
+    # ------------------------------------------------------------------------
+    # 8. Figure 10: Direction 3 - Local-SGD / FedAvg Synchronization Interval (H)
+    # ------------------------------------------------------------------------
+    if os.path.exists("results/logs/local_sgd_summary.csv") and os.path.exists("results/logs/local_sgd_curves.json"):
+        with open("results/logs/local_sgd_curves.json", "r") as f:
+            local_curves = json.load(f)
+        h_rows = read_csv_rows("results/logs/local_sgd_summary.csv")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
+
+        # Subplot 1: Convergence curves for different H
+        colors_h = ["#1f77b4", "#2ca02c", "#ff7f0e", "#9467bd", "#8c564b", "#d62728"]
+        for idx, (h_key, hist) in enumerate(local_curves.items()):
+            h_val = h_key.replace("H_", "H=")
+            epochs = [x["epoch"] for x in hist]
+            accs = [x["val_acc"] for x in hist]
+            ax1.plot(epochs, accs, "o-", color=colors_h[idx % len(colors_h)], linewidth=2, markersize=5, label=f"Local-SGD ({h_val})")
+
+        ax1.set_title("Direction 3: Validation Accuracy vs Epoch across Sync Interval H")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Validation Accuracy (%)")
+        ax1.grid(True, linestyle="--", alpha=0.5)
+        ax1.legend(fontsize=8.5)
+
+        # Subplot 2: Trade-off between Network Comm MB and Wall-Clock Speedup
+        h_labels = [f"H={r['H']}" for r in h_rows]
+        comm_mbs = [float(r["total_comm_mb"]) for r in h_rows]
+        speedups = [float(r["speedup_vs_H1"]) for r in h_rows]
+
+        x_inds = np.arange(len(h_labels))
+        w = 0.38
+        bars_comm = ax2.bar(x_inds - w/2, comm_mbs, width=w, color="#1f77b4", edgecolor="black", alpha=0.85, label="Network Comm (MB)")
+        ax2_twin = ax2.twinx()
+        line_speed = ax2_twin.plot(x_inds, speedups, "ro-", linewidth=2.5, markersize=7, label="Wall-Clock Speedup vs H=1")
+
+        for bar, mb in zip(bars_comm, comm_mbs):
+            ax2.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height() + 5.0,
+                     f"{mb:.0f} MB", ha="center", va="bottom", fontsize=8, fontweight="bold")
+
+        for xi, sp in zip(x_inds, speedups):
+            ax2_twin.text(xi, sp + 0.15, f"{sp:.1f}x", color="red", ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+
+        ax2.set_title("Communication Volume & Wall-Clock Speedup vs Sync Interval H")
+        ax2.set_xlabel("Synchronization Interval H (Local Steps)")
+        ax2.set_ylabel("Total Network Communication (MB)", color="#1f77b4")
+        ax2_twin.set_ylabel("Speedup Factor vs H=1 (×)", color="red")
+        ax2.set_xticks(x_inds)
+        ax2.set_xticklabels(h_labels)
+        ax2.grid(True, linestyle="--", alpha=0.5)
+
+        # Combine legends
+        lines1, labels1 = ax2.get_legend_handles_labels()
+        lines2, labels2 = ax2_twin.get_legend_handles_labels()
+        ax2.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8.5)
+
+        fig.tight_layout()
+        fig.savefig("results/figures/figure10_local_sgd_sync_interval.png")
+        plt.close(fig)
+
+    # ------------------------------------------------------------------------
+    # 9. Figure 11: Direction 4 - Delay-Compensated Asynchronous SGD (DC-ASGD)
+    # ------------------------------------------------------------------------
+    if os.path.exists("results/logs/dc_asgd_summary.csv") and os.path.exists("results/logs/dc_asgd_curves.json"):
+        with open("results/logs/dc_asgd_curves.json", "r") as f:
+            dc_curves = json.load(f)
+        dc_rows = read_csv_rows("results/logs/dc_asgd_summary.csv")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.2))
+
+        dc_styles = {
+            "Sync_Baseline": ("o-", "#1f77b4", "Sync Baseline (H=1, 0 delay)"),
+            "Downpour_Balanced": ("s--", "#2ca02c", "DownpourSGD (Balanced workers)"),
+            "Downpour_Stragglers": ("x-", "#d62728", "DownpourSGD + Stragglers (Uncompensated)"),
+            "DC_ASGD_L05_Stragglers": ("^--", "#ff7f0e", "DC-ASGD (lambda=0.5) + Stragglers"),
+            "DC_ASGD_L10_Stragglers": ("*-", "#9467bd", "DC-ASGD (lambda=1.0) + Stragglers"),
+        }
+
+        for m_key, (marker, color, label) in dc_styles.items():
+            if m_key not in dc_curves:
+                continue
+            hist = dc_curves[m_key]
+            epochs = [x["epoch"] for x in hist]
+            accs = [x["val_acc"] for x in hist]
+            ax1.plot(epochs, accs, marker, color=color, linewidth=2, markersize=6, label=label)
+
+        ax1.set_title("Direction 4: Convergence under Straggler Delay (DC-ASGD vs Downpour)")
+        ax1.set_xlabel("Epoch")
+        ax1.set_ylabel("Validation Accuracy (%)")
+        ax1.grid(True, linestyle="--", alpha=0.5)
+        ax1.legend(fontsize=8.5)
+
+        # Bar chart of Final Accuracy Comparison
+        labels_dc = [r["name"].replace("_Stragglers", "").replace("_", "\n") for r in dc_rows]
+        accs_dc = [float(r["final_acc"]) for r in dc_rows]
+        colors_dc = ["#1f77b4", "#2ca02c", "#d62728", "#ff7f0e", "#9467bd"]
+
+        bars_dc = ax2.bar(labels_dc, accs_dc, color=colors_dc, edgecolor="black", alpha=0.85)
+        for bar, acc in zip(bars_dc, accs_dc):
+            ax2.text(bar.get_x() + bar.get_width() / 2.0, bar.get_height() + 1.0,
+                     f"{acc:.1f}%", ha="center", va="bottom", fontsize=8.5, fontweight="bold")
+        ax2.set_title("Final Accuracy under Straggler Latency")
+        ax2.set_ylabel("Final Validation Accuracy (%)")
+        ax2.grid(True, axis="y", linestyle="--", alpha=0.5)
+        plt.sca(ax2)
+        plt.xticks(fontsize=8.5)
+
+        fig.tight_layout()
+        fig.savefig("results/figures/figure11_dc_asgd_straggler_robustness.png")
+        plt.close(fig)
+
     print("All figures generated successfully in results/figures/")
 
 

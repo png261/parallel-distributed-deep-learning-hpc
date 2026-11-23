@@ -1,0 +1,6 @@
+name,final_acc,final_loss,avg_staleness,description
+Sync_Baseline,5.0,3.6392,0.0,Ideal synchronous SGD
+Downpour_Balanced,5.0,3.6408,6.91,Standard Async PS (No stragglers)
+Downpour_Stragglers,5.0,3.649,6.9,Async PS + Stragglers (Uncompensated)
+DC_ASGD_L05_Stragglers,5.5,3.6494,6.9,DC-ASGD (lambda=0.5) + Stragglers
+DC_ASGD_L10_Stragglers,7.5,3.6491,6.9,DC-ASGD (lambda=1.0) + Stragglers

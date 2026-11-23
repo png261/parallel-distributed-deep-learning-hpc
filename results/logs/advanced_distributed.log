@@ -1,0 +1,152 @@
+Executing on Device: cpu (12 OpenMP threads)
+Generating 40-Class Dataset (N=800 train, N=200 val)...
+============================================================
+Direction 3: Local-SGD / FedAvg Synchronization Interval Study
+H-step values: [1, 2, 4, 8, 16, 32] across 8 workers, 10 epochs
+============================================================
+
+Running Local-SGD with H = 1 (Sync every 1 local steps)...
+  [H=1] Epoch  1/10 | Val Loss: 3.6802 | Val Acc: 2.50%
+  [H=1] Epoch  2/10 | Val Loss: 3.6648 | Val Acc: 7.00%
+  [H=1] Epoch  3/10 | Val Loss: 3.6377 | Val Acc: 7.50%
+  [H=1] Epoch  4/10 | Val Loss: 3.5790 | Val Acc: 20.00%
+  [H=1] Epoch  5/10 | Val Loss: 3.4280 | Val Acc: 41.00%
+  [H=1] Epoch  6/10 | Val Loss: 2.9588 | Val Acc: 37.50%
+  [H=1] Epoch  7/10 | Val Loss: 1.5730 | Val Acc: 55.00%
+  [H=1] Epoch  8/10 | Val Loss: 2.1055 | Val Acc: 47.50%
+  [H=1] Epoch  9/10 | Val Loss: 2.4196 | Val Acc: 37.50%
+  [H=1] Epoch 10/10 | Val Loss: 1.3916 | Val Acc: 59.50%
+
+Running Local-SGD with H = 2 (Sync every 2 local steps)...
+  [H=2] Epoch  1/10 | Val Loss: 3.6805 | Val Acc: 2.50%
+  [H=2] Epoch  2/10 | Val Loss: 3.6647 | Val Acc: 5.00%
+  [H=2] Epoch  3/10 | Val Loss: 3.6370 | Val Acc: 5.50%
+  [H=2] Epoch  4/10 | Val Loss: 3.5766 | Val Acc: 14.50%
+  [H=2] Epoch  5/10 | Val Loss: 3.4141 | Val Acc: 34.00%
+  [H=2] Epoch  6/10 | Val Loss: 2.8938 | Val Acc: 44.00%
+  [H=2] Epoch  7/10 | Val Loss: 1.5872 | Val Acc: 52.50%
+  [H=2] Epoch  8/10 | Val Loss: 1.3252 | Val Acc: 50.00%
+  [H=2] Epoch  9/10 | Val Loss: 1.1487 | Val Acc: 61.50%
+  [H=2] Epoch 10/10 | Val Loss: 0.6774 | Val Acc: 87.00%
+
+Running Local-SGD with H = 4 (Sync every 4 local steps)...
+  [H=4] Epoch  1/10 | Val Loss: 3.6802 | Val Acc: 1.50%
+  [H=4] Epoch  2/10 | Val Loss: 3.6650 | Val Acc: 2.50%
+  [H=4] Epoch  3/10 | Val Loss: 3.6378 | Val Acc: 8.00%
+  [H=4] Epoch  4/10 | Val Loss: 3.5775 | Val Acc: 14.00%
+  [H=4] Epoch  5/10 | Val Loss: 3.4218 | Val Acc: 32.50%
+  [H=4] Epoch  6/10 | Val Loss: 2.9702 | Val Acc: 47.00%
+  [H=4] Epoch  7/10 | Val Loss: 1.8583 | Val Acc: 57.50%
+  [H=4] Epoch  8/10 | Val Loss: 1.0133 | Val Acc: 59.00%
+  [H=4] Epoch  9/10 | Val Loss: 1.0294 | Val Acc: 62.00%
+  [H=4] Epoch 10/10 | Val Loss: 0.8533 | Val Acc: 78.50%
+
+Running Local-SGD with H = 8 (Sync every 8 local steps)...
+  [H=8] Epoch  1/10 | Val Loss: 3.6802 | Val Acc: 2.50%
+  [H=8] Epoch  2/10 | Val Loss: 3.6655 | Val Acc: 2.50%
+  [H=8] Epoch  3/10 | Val Loss: 3.6376 | Val Acc: 8.00%
+  [H=8] Epoch  4/10 | Val Loss: 3.5786 | Val Acc: 12.50%
+  [H=8] Epoch  5/10 | Val Loss: 3.4237 | Val Acc: 29.00%
+  [H=8] Epoch  6/10 | Val Loss: 2.9651 | Val Acc: 47.00%
+  [H=8] Epoch  7/10 | Val Loss: 1.8126 | Val Acc: 47.50%
+  [H=8] Epoch  8/10 | Val Loss: 1.1945 | Val Acc: 58.00%
+  [H=8] Epoch  9/10 | Val Loss: 1.0470 | Val Acc: 67.00%
+  [H=8] Epoch 10/10 | Val Loss: 0.8093 | Val Acc: 80.50%
+
+Running Local-SGD with H = 16 (Sync every 16 local steps)...
+  [H=16] Epoch  1/10 | Val Loss: 3.6808 | Val Acc: 2.50%
+  [H=16] Epoch  2/10 | Val Loss: 3.6653 | Val Acc: 5.00%
+  [H=16] Epoch  3/10 | Val Loss: 3.6375 | Val Acc: 8.00%
+  [H=16] Epoch  4/10 | Val Loss: 3.5773 | Val Acc: 14.50%
+  [H=16] Epoch  5/10 | Val Loss: 3.4137 | Val Acc: 39.50%
+  [H=16] Epoch  6/10 | Val Loss: 2.9510 | Val Acc: 48.00%
+  [H=16] Epoch  7/10 | Val Loss: 1.8226 | Val Acc: 57.50%
+  [H=16] Epoch  8/10 | Val Loss: 1.0318 | Val Acc: 67.50%
+  [H=16] Epoch  9/10 | Val Loss: 0.9651 | Val Acc: 66.00%
+  [H=16] Epoch 10/10 | Val Loss: 0.8079 | Val Acc: 79.50%
+
+Running Local-SGD with H = 32 (Sync every 32 local steps)...
+  [H=32] Epoch  1/10 | Val Loss: 3.6806 | Val Acc: 5.00%
+  [H=32] Epoch  2/10 | Val Loss: 3.6658 | Val Acc: 2.50%
+  [H=32] Epoch  3/10 | Val Loss: 3.6392 | Val Acc: 9.50%
+  [H=32] Epoch  4/10 | Val Loss: 3.5821 | Val Acc: 13.00%
+  [H=32] Epoch  5/10 | Val Loss: 3.4304 | Val Acc: 34.50%
+  [H=32] Epoch  6/10 | Val Loss: 2.9848 | Val Acc: 45.50%
+  [H=32] Epoch  7/10 | Val Loss: 1.8748 | Val Acc: 46.50%
+  [H=32] Epoch  8/10 | Val Loss: 1.0083 | Val Acc: 59.00%
+  [H=32] Epoch  9/10 | Val Loss: 0.8362 | Val Acc: 75.50%
+  [H=32] Epoch 10/10 | Val Loss: 0.8032 | Val Acc: 84.50%
+
+============================================================
+Direction 4: Delay-Compensated Asynchronous SGD (DC-ASGD) vs DownpourSGD
+Comparing Async PS with Stragglers (Workers 6, 7 have 3x delay)
+============================================================
+
+Running Sync_Baseline...
+  [Sync_Baseline] Epoch  1/10 | Val Loss: 3.6844 | Val Acc: 2.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  2/10 | Val Loss: 3.6803 | Val Acc: 2.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  3/10 | Val Loss: 3.6764 | Val Acc: 2.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  4/10 | Val Loss: 3.6724 | Val Acc: 4.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  5/10 | Val Loss: 3.6683 | Val Acc: 5.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  6/10 | Val Loss: 3.6638 | Val Acc: 5.00% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  7/10 | Val Loss: 3.6589 | Val Acc: 5.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  8/10 | Val Loss: 3.6531 | Val Acc: 5.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch  9/10 | Val Loss: 3.6467 | Val Acc: 5.50% | Avg Staleness: 0.0
+  [Sync_Baseline] Epoch 10/10 | Val Loss: 3.6392 | Val Acc: 5.00% | Avg Staleness: 0.0
+
+Running Downpour_Balanced...
+  [Downpour_Balanced] Epoch  1/10 | Val Loss: 3.6845 | Val Acc: 2.50% | Avg Staleness: 6.1
+  [Downpour_Balanced] Epoch  2/10 | Val Loss: 3.6805 | Val Acc: 2.50% | Avg Staleness: 6.6
+  [Downpour_Balanced] Epoch  3/10 | Val Loss: 3.6768 | Val Acc: 3.50% | Avg Staleness: 6.7
+  [Downpour_Balanced] Epoch  4/10 | Val Loss: 3.6728 | Val Acc: 4.00% | Avg Staleness: 6.8
+  [Downpour_Balanced] Epoch  5/10 | Val Loss: 3.6687 | Val Acc: 5.00% | Avg Staleness: 6.8
+  [Downpour_Balanced] Epoch  6/10 | Val Loss: 3.6644 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [Downpour_Balanced] Epoch  7/10 | Val Loss: 3.6596 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [Downpour_Balanced] Epoch  8/10 | Val Loss: 3.6542 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [Downpour_Balanced] Epoch  9/10 | Val Loss: 3.6480 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [Downpour_Balanced] Epoch 10/10 | Val Loss: 3.6408 | Val Acc: 5.00% | Avg Staleness: 6.9
+
+Running Downpour_Stragglers...
+  [Downpour_Stragglers] Epoch  1/10 | Val Loss: 3.6850 | Val Acc: 2.50% | Avg Staleness: 6.0
+  [Downpour_Stragglers] Epoch  2/10 | Val Loss: 3.6814 | Val Acc: 2.50% | Avg Staleness: 6.5
+  [Downpour_Stragglers] Epoch  3/10 | Val Loss: 3.6780 | Val Acc: 2.50% | Avg Staleness: 6.7
+  [Downpour_Stragglers] Epoch  4/10 | Val Loss: 3.6747 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [Downpour_Stragglers] Epoch  5/10 | Val Loss: 3.6713 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [Downpour_Stragglers] Epoch  6/10 | Val Loss: 3.6675 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [Downpour_Stragglers] Epoch  7/10 | Val Loss: 3.6635 | Val Acc: 4.50% | Avg Staleness: 6.9
+  [Downpour_Stragglers] Epoch  8/10 | Val Loss: 3.6591 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [Downpour_Stragglers] Epoch  9/10 | Val Loss: 3.6543 | Val Acc: 5.50% | Avg Staleness: 6.9
+  [Downpour_Stragglers] Epoch 10/10 | Val Loss: 3.6490 | Val Acc: 5.00% | Avg Staleness: 6.9
+
+Running DC_ASGD_L05_Stragglers...
+  [DC_ASGD_L05_Stragglers] Epoch  1/10 | Val Loss: 3.6851 | Val Acc: 2.50% | Avg Staleness: 6.0
+  [DC_ASGD_L05_Stragglers] Epoch  2/10 | Val Loss: 3.6813 | Val Acc: 2.50% | Avg Staleness: 6.5
+  [DC_ASGD_L05_Stragglers] Epoch  3/10 | Val Loss: 3.6781 | Val Acc: 2.50% | Avg Staleness: 6.7
+  [DC_ASGD_L05_Stragglers] Epoch  4/10 | Val Loss: 3.6746 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [DC_ASGD_L05_Stragglers] Epoch  5/10 | Val Loss: 3.6713 | Val Acc: 3.00% | Avg Staleness: 6.8
+  [DC_ASGD_L05_Stragglers] Epoch  6/10 | Val Loss: 3.6678 | Val Acc: 3.00% | Avg Staleness: 6.8
+  [DC_ASGD_L05_Stragglers] Epoch  7/10 | Val Loss: 3.6638 | Val Acc: 4.00% | Avg Staleness: 6.9
+  [DC_ASGD_L05_Stragglers] Epoch  8/10 | Val Loss: 3.6595 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [DC_ASGD_L05_Stragglers] Epoch  9/10 | Val Loss: 3.6548 | Val Acc: 5.00% | Avg Staleness: 6.9
+  [DC_ASGD_L05_Stragglers] Epoch 10/10 | Val Loss: 3.6494 | Val Acc: 5.50% | Avg Staleness: 6.9
+
+Running DC_ASGD_L10_Stragglers...
+  [DC_ASGD_L10_Stragglers] Epoch  1/10 | Val Loss: 3.6850 | Val Acc: 2.50% | Avg Staleness: 6.0
+  [DC_ASGD_L10_Stragglers] Epoch  2/10 | Val Loss: 3.6813 | Val Acc: 2.50% | Avg Staleness: 6.5
+  [DC_ASGD_L10_Stragglers] Epoch  3/10 | Val Loss: 3.6778 | Val Acc: 2.50% | Avg Staleness: 6.7
+  [DC_ASGD_L10_Stragglers] Epoch  4/10 | Val Loss: 3.6742 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [DC_ASGD_L10_Stragglers] Epoch  5/10 | Val Loss: 3.6709 | Val Acc: 2.50% | Avg Staleness: 6.8
+  [DC_ASGD_L10_Stragglers] Epoch  6/10 | Val Loss: 3.6674 | Val Acc: 3.00% | Avg Staleness: 6.8
+  [DC_ASGD_L10_Stragglers] Epoch  7/10 | Val Loss: 3.6634 | Val Acc: 3.50% | Avg Staleness: 6.9
+  [DC_ASGD_L10_Stragglers] Epoch  8/10 | Val Loss: 3.6593 | Val Acc: 5.50% | Avg Staleness: 6.9
+  [DC_ASGD_L10_Stragglers] Epoch  9/10 | Val Loss: 3.6544 | Val Acc: 7.50% | Avg Staleness: 6.9
+  [DC_ASGD_L10_Stragglers] Epoch 10/10 | Val Loss: 3.6491 | Val Acc: 7.50% | Avg Staleness: 6.9
+
+============================================================
+ALL ADVANCED DISTRIBUTED BENCHMARKS COMPLETED SUCCESSFULLY!
+Files generated:
+  - results/logs/local_sgd_summary.csv
+  - results/logs/local_sgd_curves.json
+  - results/logs/dc_asgd_summary.csv
+  - results/logs/dc_asgd_curves.json
+============================================================
